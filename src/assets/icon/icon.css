@@ -1,0 +1,10 @@
+.star-active {
+	background: url('../../assets/icon/ICON.svg') no-repeat -190px -16px;
+	width: 18px;
+	height: 18px;
+}
+.star-inactive {
+	background: url('../../assets/icon/ICON.svg') no-repeat -207px -16px;
+	width: 18px;
+	height: 18px;
+}
