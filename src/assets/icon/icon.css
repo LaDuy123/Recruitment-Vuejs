@@ -1,10 +1,33 @@
 .star-active {
-	background: url('../../assets/icon/ICON.svg') no-repeat -190px -16px;
+	background: url('./ICON.svg') no-repeat -190px -16px;
 	width: 18px;
 	height: 18px;
 }
 .star-inactive {
-	background: url('../../assets/icon/ICON.svg') no-repeat -207px -16px;
+	background: url('./ICON.svg') no-repeat -207px -16px;
 	width: 18px;
 	height: 18px;
+}
+.setting {
+	background: url('./ICON.svg') no-repeat -102px -678px;
+	width: 16px;
+	height: 16px;
+}
+
+.filter {
+	background: url('./ICON.svg') no-repeat -42px -658px;
+	width: 16px;
+	height: 16px;
+}
+
+.export {
+	background: url('./ICON.svg') no-repeat -62px -658px;
+	width: 16px;
+	height: 16px;
+}
+
+.chart {
+	background: url('./ICON.svg') no-repeat -4px -849px;
+	width: 16px;
+	height: 16px;
 }

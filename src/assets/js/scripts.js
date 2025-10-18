@@ -163,7 +163,7 @@ const generateCandidateData = (index) => {
         RecruitmentName: getRandomElement(recruitmentNames),
         RecruitmentRoundName: getRandomElement(recruitmentRounds),
         Score: Math.floor(Math.random() * 5) + 1,
-        ApplyDate: null,
+        ApplyDate: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString(),
         ChannelName: null,
         EducationDegreeName: null,
         EducationPlaceName: null,

@@ -1,18 +1,29 @@
 <script setup>
-import { reactive, watch } from 'vue';
+import { reactive, watch } from 'vue'
+import { validator } from '@/utils/validatorfn.js'
+import MsTextInput from '@/components/ms-textInput/MsTextInput.vue'
+import MsSelectList from '@/components/ms-selectList/MsSelectList.vue'
+import MsDate from '@/components/ms-date/MsDate.vue'
+import MsButton from '@/components/ms-button/MsButton.vue'
 
-const props = defineProps(['showModal', 'editingCandidate']);
-const emit = defineEmits(['close', 'save']);
+const props = defineProps(['editingCandidate']) 
+const emit = defineEmits(['close', 'save'])
 
-defineExpose({ resetForm });
+const { form: validatorForm, errors, isValid, validateForm, reset: resetValidator } = validator()
 
+const validationConfig = {
+  CandidateName: { rules: ['required'], label: 'Họ và tên' },
+  ApplyDate: { rules: ['required'], label: 'Ngày ứng tuyển' },
+  Mobile: { rules: ['phone'], label: 'Số điện thoại' },
+  Email: { rules: ['email'], label: 'Email' }
+}
 
 const genderList = [
   { value: '', label: 'Chọn giới tính' },
   { value: '1', label: 'Nam' },
   { value: '0', label: 'Nữ' },
   { value: '2', label: 'Khác' }
-];
+]
 
 const locationList = [
   { value: '', label: 'Chọn khu vực' },
@@ -22,7 +33,7 @@ const locationList = [
   { value: 'can_tho', label: 'Cần Thơ' },
   { value: 'hai_phong', label: 'Hải Phòng' },
   { value: 'hue', label: 'Huế' }
-];
+]
 
 const educationLevelList = [
   { value: '', label: 'Nhập trình độ đào tạo' },
@@ -32,7 +43,7 @@ const educationLevelList = [
   { value: 'thac_sy', label: 'Thạc sỹ' },
   { value: 'tien_sy', label: 'Tiến sỹ' },
   { value: 'khac', label: 'Khác' }
-];
+]
 
 const trainingPlaceList = [
   { value: '', label: 'Nhập nơi đào tạo' },
@@ -40,7 +51,7 @@ const trainingPlaceList = [
   { value: 'BK', label: 'Trường ĐH Bách Khoa Hà Nội' },
   { value: 'KTQD', label: 'Trường ĐH Kinh tế Quốc dân' },
   { value: 'Khác', label: 'Khác' }
-];
+]
 
 const majorList = [
   { value: '', label: 'Nhập chuyên ngành' },
@@ -48,46 +59,47 @@ const majorList = [
   { value: 'KT', label: 'Kinh tế' },
   { value: 'QTKD', label: 'Quản trị kinh doanh' },
   { value: 'Khác', label: 'Khác' }
-];
+]
 
 const sourceList = [
   { value: '', label: 'Chọn nguồn ứng viên' },
   { value: 'TDT', label: 'Tự đào tạo' },
   { value: 'PV', label: 'Thông qua phỏng vấn' },
   { value: 'TC', label: 'Được tiến cử' }
-];
+]
 
 const collaboratorList = [
   { value: '', label: 'Chọn cộng tác viên' },
   { value: '1', label: 'Nguyễn Văn A' },
   { value: '2', label: 'Trần Thị B' },
   { value: '3', label: 'Lê Văn C' }
-];
+]
 
 const referralList = [
   { value: '', label: 'Chọn nhân sự khai thác' },
   { value: '1', label: 'Đinh Nga QTHH' },
   { value: '2', label: 'Quang Huy QLTT' },
   { value: '3', label: 'Ngọc Anh QLPM' }
-];
+]
 
-
-// Form (use keys matching backend object)
 const formDefaults = {
   CandidateName: '', Mobile: '', Email: '', Address: '',
   Birthday: '', ApplyDate: '', CandidateType: '', AttractivePersonnel: '', CollaboratorName: '',
   WorkPlaceRecent: '', AreaName: '', EducationDegreeName: '', EducationPlaceName: '', EducationMajorName: '',
   CompanyName: '', StartDate: '', EndDate: '', JobPositionName: '', JobDescription: '',
   Gender: '', CandidateID: null,
-  // UI-only
   addReferralToPool: false
-};
+}
 
-const form = reactive({ ...formDefaults });
+const form = validatorForm.value
+
+watch(() => form, (newForm) => {
+  validatorForm.value = newForm
+}, { deep: true, immediate: true })
 
 watch(() => props.editingCandidate, (candidate) => {
-  Object.assign(form, mapCandidateToForm(candidate || {}));
-}, { immediate: true });
+  Object.assign(validatorForm.value, mapCandidateToForm(candidate || {}))
+}, { immediate: true })
 
 function mapCandidateToForm(candidate) {
   return {
@@ -112,90 +124,100 @@ function mapCandidateToForm(candidate) {
     StartDate: formatDateISOToDMY(candidate.StartDate),
     EndDate: formatDateISOToDMY(candidate.EndDate),
     CandidateID: candidate.CandidateID || null
-  };
+  }
 }
 
 function formatDateISOToDMY(isoDate) {
-  if (!isoDate) return '';
-  const d = new Date(isoDate);
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  if (!isoDate) return ''
+  const d = new Date(isoDate)
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 }
 
 function resetForm() { 
-  Object.assign(form, { ...formDefaults }); 
-}
-
-function emitClose() { 
-  emit('close'); 
+  Object.assign(validatorForm.value, { ...formDefaults }) 
+  resetValidator() 
 }
 
 function handleSave() { 
-  if (!form.CandidateName.trim() || !form.ApplyDate) {
-    return alert('Vui lòng nhập họ tên và ngày ứng tuyển');
-  }
+ const isFormValid = validateForm(validationConfig) 
+  if (!isFormValid) return
 
   const payload = {
-    ...form,
+     ...validatorForm.value,
     CandidateID: props.editingCandidate?.CandidateID || form.CandidateID || Date.now(),
     Birthday: parseDateDMYToISO(form.Birthday),
     ApplyDate: parseDateDMYToISO(form.ApplyDate),
     StartDate: parseDateDMYToISO(form.StartDate),
     EndDate: parseDateDMYToISO(form.EndDate),
     Gender: form.Gender === '' ? null : parseInt(form.Gender, 10)
-  };
+  }
 
-  emit('save', payload);
-  emit('close');
+  emit('save', payload)
 }
 
 function parseDateDMYToISO(dateStr) {
-  if (!dateStr) return null;
-  const [d, m, y] = dateStr.split('/').map(p => parseInt(p, 10));
-  return isNaN(d) || isNaN(m) || isNaN(y) ? null : new Date(y, m - 1, d).toISOString();
+  if (!dateStr) return null
+  const [d, m, y] = dateStr.split('/').map(p => parseInt(p, 10))
+  return isNaN(d) || isNaN(m) || isNaN(y) ? null : new Date(y, m - 1, d).toISOString()
 }
+
+const handleFormSave = () => handleSave()
+
+defineExpose({ resetForm, handleFormSave })
 </script>
 <template>
-  <div v-if="showModal" id="addCandidateModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>{{ editingCandidate ? 'Sửa ứng viên' : 'Thêm ứng viên' }}</h2>
-        <span class="close-button" @click="emitClose">&times;</span>
-      </div>
-
-      <div class="modal-body">
+      <div class="candidate-form-container">
         <div class="form-section">
           <div class="row">
             <div class="col col-md-12">
-              <msTextInput v-model="form.CandidateName" title="Họ và tên" placeholder="Nhập họ và tên" required id="fullName" />
+              <MsTextInput 
+                v-model="form.CandidateName" 
+                label="Họ và tên" 
+                placeholder="Nhập họ và tên" 
+                required 
+                :error="errors.CandidateName"
+              />
             </div>
           </div>
 
           <div class="row">
             <div class="col col-md-6">
-              <msDate v-model="form.Birthday" title="Ngày sinh" id="birthDate" placeholder="dd/MM/yyyy" />
+              <MsDate v-model="form.Birthday" title="Ngày sinh" id="birthDate" placeholder="dd/MM/yyyy" />
             </div>
             <div class="col col-md-6">
-              <msSelectList v-model="form.Gender" title="Giới tính" id="gender" :list="genderList" />
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="col col-md-12">
-              <msSelectList v-model="form.AreaName" title="Khu vực" id="location" :list="locationList" />
-            </div>
-          </div>
-          <div class="row">
-            <div class="col col-md-6">
-              <msTextInput v-model="form.Mobile" title="Số điện thoại" placeholder="Nhập số điện thoại" type="tel" id="phoneNumber" />
-            </div>
-            <div class="col col-md-6">
-              <msTextInput v-model="form.Email" title="Email" placeholder="Nhập email" type="email" id="email" />
+              <MsSelectList v-model="form.Gender" title="Giới tính" id="gender" :list="genderList" />
             </div>
           </div>
 
           <div class="row">
             <div class="col col-md-12">
-              <msTextInput v-model="form.Address" title="Địa chỉ" placeholder="Nhập địa chỉ" id="address" />
+              <MsSelectList v-model="form.AreaName" title="Khu vực" id="location" :list="locationList" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col col-md-6">
+              <MsTextInput 
+                v-model="form.Mobile" 
+                label="Số điện thoại" 
+                placeholder="Nhập số điện thoại" 
+                type="tel" 
+                :error="errors.Mobile"
+              />
+            </div>
+            <div class="col col-md-6">
+              <MsTextInput 
+                v-model="form.Email" 
+                label="Email" 
+                placeholder="Nhập email" 
+                type="email" 
+                :error="errors.Email"
+              />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col col-md-12">
+              <MsTextInput v-model="form.Address" label="Địa chỉ" placeholder="Nhập địa chỉ" id="address" />
             </div>
           </div>
         </div>
@@ -204,13 +226,13 @@ function parseDateDMYToISO(dateStr) {
           <h3>HỌC VẤN</h3>
           <div class="row education-item">
             <div class="col col-md-4">
-              <msSelectList v-model="form.EducationDegreeName" title="Trình độ đào tạo" required id="educationLevel" :list="educationLevelList" />
+              <MsSelectList v-model="form.EducationDegreeName" title="Trình độ đào tạo" required id="educationLevel" :list="educationLevelList" />
             </div>
             <div class="col col-md-4">
-              <msSelectList v-model="form.EducationPlaceName" title="Nơi đào tạo" required id="trainingPlace" :list="trainingPlaceList" />
+              <MsSelectList v-model="form.EducationPlaceName" title="Nơi đào tạo" required id="trainingPlace" :list="trainingPlaceList" />
             </div>
             <div class="col col-md-4">
-              <msSelectList v-model="form.EducationMajorName" title="Chuyên ngành" required id="major" :list="majorList" />
+              <MsSelectList v-model="form.EducationMajorName" title="Chuyên ngành" required id="major" :list="majorList" />
             </div>
           </div>
           <button class="add-more-btn" @click.prevent><i class="fas fa-plus"></i> Thêm học vấn</button>
@@ -219,19 +241,25 @@ function parseDateDMYToISO(dateStr) {
         <div class="form-section">
           <div class="row">
             <div class="col col-md-6">
-              <msDate v-model="form.ApplyDate" title="Ngày ứng tuyển" placeholder="MM/yyyy" format="MM/yyyy" required id="applicationDate" />
+              <MsDate 
+                v-model="form.ApplyDate" 
+                title="Ngày ứng tuyển" 
+                placeholder="dd/MM/yyyy" 
+                required 
+                :error="errors.ApplyDate"
+              />
             </div>
             <div class="col col-md-6">
-              <msSelectList v-model="form.CandidateType" title="Nguồn ứng viên" id="source" :list="sourceList" />
+              <MsSelectList v-model="form.CandidateType" title="Nguồn ứng viên" id="source" :list="sourceList" />
             </div>
           </div>
 
           <div class="row">
             <div class="col col-md-6">
-              <msSelectList v-model="form.AttractivePersonnel" title="Nhân sự khai thác" id="referral" :list="referralList" />
+              <MsSelectList v-model="form.AttractivePersonnel" title="Nhân sự khai thác" id="referral" :list="referralList" />
             </div>
             <div class="col col-md-6">
-              <msSelectList v-model="form.CollaboratorName" title="Cộng tác viên"  id="collaboratorName" :list="collaboratorList" />
+              <MsSelectList v-model="form.CollaboratorName" title="Cộng tác viên"  id="collaboratorName" :list="collaboratorList" />
             </div>
           </div>
 
@@ -242,114 +270,41 @@ function parseDateDMYToISO(dateStr) {
 
 
             <div class="col col-md-12">
-              <msTextInput v-model="form.WorkPlaceRecent" title="Nơi làm việc gần đây" placeholder="Nhập nơi làm việc gần đây" id="recentCompany" />
+              <MsTextInput v-model="form.WorkPlaceRecent" label="Nơi làm việc gần đây" placeholder="Nhập nơi làm việc gần đây" id="recentCompany" />
             </div>
         </div>
-
-
         <div class="form-section experience-section">
           <div class="experience-item">
 
             <div class="col col-md-12">
-              <msTextInput v-model="form.CompanyName" title="Nơi làm việc" placeholder="Nhập nơi làm việc" id="companyName" />
+              <MsTextInput v-model="form.CompanyName" label="Nơi làm việc" placeholder="Nhập nơi làm việc" id="companyName" />
             </div>
 
             <div class="row">
               <div class="col col-md-6">
-                <msDate v-model="form.StartDate" title="Từ" id="startDate" placeholder="MM/yyyy" format="MM/yyyy" />
+                <MsDate v-model="form.StartDate" title="Từ" id="startDate" placeholder="MM/yyyy" format="MM/yyyy" />
               </div>
               <div class="col col-md-6">
-                <msDate v-model="form.EndDate" title="Đến" id="endDate" placeholder="MM/yyyy" format="MM/yyyy" />
+                <MsDate v-model="form.EndDate" title="Đến" id="endDate" placeholder="MM/yyyy" format="MM/yyyy" />
               </div>
             </div>
 
 
             <div class="col col-md-12">
-              <msTextInput v-model="form.JobPositionName" title="Vị trí công việc" placeholder="Nhập vị trí công việc" id="position" />
+              <MsTextInput v-model="form.JobPositionName" label="Vị trí công việc" placeholder="Nhập vị trí công việc" id="position" />
             </div>
             <div class="col col-md-12">
-              <msTextInput v-model="form.JobDescription" title="Mô tả công việc" placeholder="Nhập mô tả công việc" id="jobDescription" />
+              <MsTextInput v-model="form.JobDescription" label="Mô tả công việc" placeholder="Nhập mô tả công việc" id="jobDescription" />
             </div>
           </div>
         </div>
       </div>
-
-      <div class="modal-footer">
-        <msButton size="md" icon="" class="btn-cancel" @click="emitClose">Hủy</msButton>
-        <msButton size="md" icon="" class="btn-save" @click="handleSave">Lưu</msButton>
-      </div>
-    </div>
-  </div>
 </template>
 
 <style scoped>
 @import 'bootstrap/dist/css/bootstrap.min.css';
-/* --Thêm Ứng viên Modal-- */
-.modal {
-  display: flex;
-  position: fixed;
-  z-index: 1001;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.4);
-  align-items: center;
-  justify-content: center;
-}
 
-.modal-content {
-  background-color: #fefefe;
-  margin: auto;
-  padding: 0;
-  border: 1px solid #e6e6e6;
-  width: 520px;
-  /* wider to match screenshots */
-  max-width: calc(100% - 40px);
-  border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  padding: 5px 10px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 18px;
-  color: var(--text-color);
-}
-
-.close-button {
-  color: #aaa;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.close-button:hover,
-.close-button:focus {
-  color: #333;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.modal-body {
+.candidate-form-container {
   padding: 18px 20px;
   display: flex;
   flex-direction: column;

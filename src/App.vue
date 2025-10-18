@@ -1,9 +1,7 @@
 <script setup>
 import { ref } from 'vue' 
-import HeaderComponent from './layout/Header.vue'
-import SidebarComponent from './layout/Sidebar/Sidebar.vue'
-import CandidateList from './views/Candidates/CandidateList.vue'
-import Content from './layout/Content/Content.vue'
+import HeaderComponent from './layout/header/Header.vue'
+import SidebarComponent from './layout/sidebar/Sidebar.vue'
 
 const isCollapsed = ref(false)
 

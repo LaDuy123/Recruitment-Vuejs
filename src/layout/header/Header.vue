@@ -19,9 +19,6 @@
         </div>
     </header>
 </template>
-<!-- <style>
-@import "../assets/css/styles.css";
-</style> -->
 <style scoped>
 
 .top-header .app-menu-icon {

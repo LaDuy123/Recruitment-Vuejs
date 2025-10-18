@@ -5,25 +5,14 @@
       <span v-if="required" class="text-danger" aria-hidden="true">*</span>
     </label>
 
-    <!-- DATE PICKER VỚI CALENDAR -->
-    <Datepicker
-      v-model="internalValue"
-      :format="format"
-      :placeholder="placeholder"
-      class="form-control datepicker-input"
-      :id="computedId"
-      :clearable="clearable"
-      :autoApply="autoApply"
-      :enable-time-picker="enableTimePicker"
-      :format-locale="viLocale"
-      :min-date="minDate"
-      :max-date="maxDate"
-      :disabled="disabled"
-      :readonly="readonly"
-    />
+    <Datepicker v-model="internalValue" :format="format" :placeholder="placeholder"
+      class="form-control datepicker-input" :id="computedId" :clearable="clearable" :autoApply="autoApply"
+      :enable-time-picker="enableTimePicker" :format-locale="viLocale" :min-date="minDate" :max-date="maxDate"
+      :disabled="disabled" :readonly="readonly" />
 
-    <p v-if="hint && !hasError" :id="hintId" class="form-hint">{{ hint }}</p>
-    <p v-if="hasError" :id="errorId" class="form-error" role="alert">{{ error }}</p>
+    <span v-if="props.error" class="ms-validation-text text-danger">
+      {{ props.error }}
+    </span>
   </div>
 </template>
 
@@ -39,7 +28,6 @@ const props = defineProps({
   modelValue: { type: [String, Date], default: '' },
   title: { type: String, default: '' },
   required: { type: Boolean, default: false },
-  // layout handled by parent (Bootstrap grid). Remove col prop.
   id: { type: String, default: '' },
   name: { type: String, default: '' },
   placeholder: { type: String, default: '' },
@@ -53,15 +41,13 @@ const props = defineProps({
   min: { type: [String, Date], default: null },
   max: { type: [String, Date], default: null },
   valueType: { type: String, default: 'string' }, // 'string' | 'date'
-  format: { type: String, default: 'dd/MM/yyyy' }
+  format: { type: String, default: 'dd/MM/yyyy' },
+  error: String
 })
 
 const emit = defineEmits(['update:modelValue', 'blur', 'focus'])
 
-// Format (can be overridden via prop)
 const viLocale = ref(vi);
-
-// NOTE: use `props.format` throughout for parsing/formatting
 
 const hasError = computed(() => !!props.error)
 const hintId = computed(() => (props.hint ? `${computedId.value}-hint` : null))
@@ -77,31 +63,25 @@ const describedBy = computed(() => {
 const computedId = computed(() => {
   if (props.id) return props.id
   const base = props.name || props.title || 'date'
-  return `${base.toString().toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).slice(2,8)}`
+  return `${base.toString().toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).slice(2, 8)}`
 })
 
-// internal date value is a JS Date or null
 const internalValue = ref(null);
 
-// parse helper: accept strings in dd/MM/yyyy or Date
 function parseToDate(v) {
   if (!v) return null
   if (v instanceof Date) return isValid(v) ? v : null
-  // try using provided format
   const parsed = parse(v, props.format || 'dd/MM/yyyy', new Date())
   return isValid(parsed) ? parsed : null
 }
 
-// expose min/max as Date or null
 const minDate = computed(() => parseToDate(props.min))
 const maxDate = computed(() => parseToDate(props.max))
 
-// keep internalValue synced with incoming modelValue
 watch(() => props.modelValue, (newVal) => {
   internalValue.value = parseToDate(newVal)
 }, { immediate: true })
 
-// when user picks a date, emit either string 'dd/MM/yyyy' or Date depending on valueType
 watch(internalValue, (newVal) => {
   if (newVal) {
     if (props.valueType === 'date') {
@@ -114,7 +94,6 @@ watch(internalValue, (newVal) => {
   }
 })
 
-// layout is controlled by parent (use Bootstrap grid classes like `col-md-6`)
 </script>
 
 <style scoped>
@@ -131,7 +110,10 @@ watch(internalValue, (newVal) => {
   align-items: center;
   gap: 0.25rem;
 }
-.label-text { display: inline-block; }
+
+.label-text {
+  display: inline-block;
+}
 
 /* Layout is delegated to parent containers (Bootstrap grid). */
 
@@ -140,21 +122,25 @@ watch(internalValue, (newVal) => {
   padding: 0;
   background-color: transparent;
 }
+
 .datepicker-input svg,
 .datepicker-input i {
   max-width: 1.25rem;
   max-height: 1.25rem;
 }
+
 .datepicker-input:focus {
   outline: none;
   border-color: #4f9cff;
-  box-shadow: 0 0 0 3px rgba(79,156,255,0.12);
+  box-shadow: 0 0 0 3px rgba(79, 156, 255, 0.12);
 }
+
 .form-hint {
   margin-top: 0.375rem;
   font-size: 0.85rem;
   color: #6b6b6b;
 }
+
 .form-error {
   margin-top: 0.375rem;
   font-size: 0.85rem;
@@ -163,8 +149,13 @@ watch(internalValue, (newVal) => {
 
 /* Safety overrides for vue-datepicker wrapper to avoid stacked inputs/icons */
 /* include multiple possible internal class names used across versions */
-.vp__input, .vp-input, .vp__input-wrapper, .vp__input-wrap, .vue-datepicker__input {
-  display: block !important; /* let inner wrap/input control layout */
+.vp__input,
+.vp-input,
+.vp__input-wrapper,
+.vp__input-wrap,
+.vue-datepicker__input {
+  display: block !important;
+  /* let inner wrap/input control layout */
 }
 
 /* Move visible padding/border to the internal input element so outer wrapper doesn't add extra space */
@@ -201,4 +192,11 @@ watch(internalValue, (newVal) => {
   flex: 0 0 auto !important;
   margin-left: 0.25rem !important;
 }
+.ms-validation-text {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+.text-success { color: #28a745; }
+.text-danger { color: #dc3545; }
+.text-warning { color: #ffc107; }
 </style>

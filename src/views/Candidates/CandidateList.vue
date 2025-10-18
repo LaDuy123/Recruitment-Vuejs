@@ -1,233 +1,122 @@
 <script setup>
-import MsTable from '@/components/msTable/msTable.vue'
-import CandidateForm from '@/views/Candidates/CandidateForm.vue'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import MsButton from '@/components/ms-button/MsButton.vue'
+import MsPopup from '@/components/ms-popup/MsPopup.vue'
+import MsTable from '@/components/ms-table/msTable.vue'
+import CandidateForm from '@/views/candidates/CandidateForm.vue'
+import { useDebounce } from '@vueuse/core'
 
 const candidates = ref([])
-const searchInput = ref('')
 const searchQuery = ref('')
 const currentPage = ref(1)
 const recordsPerPage = ref(10)
+const showModal = ref(false)
 const editingCandidate = ref(null)
 const addModalRef = ref(null)
-const showModal = ref(false)
-const selectedCandidates = ref([]) // ✅ Thêm cho checkbox slot
 
-// ✅ COLUMNS - GIỮ NGUYÊN + type đúng
-const candidateColumns = [
-    { key: 'CandidateName', label: 'Họ và tên', type: 'text' },
-    { key: 'Mobile', label: 'Số điện thoại', type: 'text' },
-    { key: 'Email', label: 'Email', type: 'text' },
-    { key: 'RecruitmentCampaignNames', label: 'Chiến dịch tuyển dụng', type: 'text' },
-    { key: 'JobPositionName', label: 'Vị trí', type: 'text' },
-    { key: 'RecruitmentName', label: 'Tin tuyển dụng', type: 'text' },
-    { key: 'RecruitmentRoundName', label: 'Vòng', type: 'text' },
-    { key: 'Score', label: 'Đánh giá', type: 'custom' },
-    { key: 'ApplyDate', label: 'Ngày ứng tuyển', type: 'date' }
+const columns = [
+  { key: 'CandidateName', label: 'Họ và tên', type: 'text' },
+  { key: 'Mobile', label: 'Số điện thoại', type: 'text' },
+  { key: 'Email', label: 'Email' },
+  { key: 'RecruitmentCampaignNames', label: 'Chiến dịch tuyển dụng' },
+  { key: 'JobPositionName', label: 'Vị trí tuyển dụng' },
+  { key: 'RecruitmentName', label: 'Tin tuyển dụng' },
+  { key: 'RecruitmentRoundName', label: 'Vòng tuyển dụng' },
+  { key: 'Score', label: 'Đánh giá', type: 'custom' },
+  { key: 'ApplyDate', label: 'Ngày ứng tuyển', type: 'date' }
 ]
 
-// ✅ SORT
-const sortKey = ref('')
-const sortOrder = ref('asc')
-
 onMounted(() => {
-    const saved = localStorage.getItem('candidateData')
-    candidates.value = saved ? JSON.parse(saved) : []
+  const saved = localStorage.getItem('candidateData')
+  candidates.value = saved ? JSON.parse(saved) : []
 })
 
-// ✅ FILTERED + SORT
+const debouncedQuery = useDebounce(searchQuery, 500) 
+
 const filteredCandidates = computed(() => {
-    let result = [...candidates.value]
-
-    // Search
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        result = result.filter(c =>
-            (c.CandidateName?.toLowerCase().includes(query)) ||
-            (c.Mobile?.includes(query)) ||
-            (c.Email?.toLowerCase().includes(query))
-        )
-    }
-
-    // Sort
-    if (sortKey.value) {
-        result.sort((a, b) => {
-            const aVal = getNestedValue(a, sortKey.value)
-            const bVal = getNestedValue(b, sortKey.value)
-            if (aVal === bVal) return 0
-            const comparison = aVal > bVal ? 1 : -1
-            return sortOrder.value === 'asc' ? comparison : -comparison
-        })
-    }
-
-    return result
+  const query = debouncedQuery.value.toLowerCase()
+  return candidates.value.filter(c =>
+    c.CandidateName?.toLowerCase().includes(query) ||
+    c.Mobile?.includes(query) ||
+    c.Email?.toLowerCase().includes(query)
+  )
 })
 
-// ✅ PAGINATION
-const totalPages = computed(() => Math.ceil(filteredCandidates.value.length / recordsPerPage.value) || 1)
-
-const paginatedCandidates = computed(() => {
-    if (!filteredCandidates.value.length) return []
-    const start = (currentPage.value - 1) * recordsPerPage.value
-    const end = start + recordsPerPage.value
-    return filteredCandidates.value.slice(start, end)
-})
-
-const currentRangeText = computed(() => {
-    const start = (currentPage.value - 1) * recordsPerPage.value + 1
-    const end = Math.min(currentPage.value * recordsPerPage.value, filteredCandidates.value.length)
-    return `${Math.min(start, filteredCandidates.value.length)} - ${end} bản ghi`
-})
-
-// ✅ WATCH - FIX BUG KHÔNG CÓ DATA
-watch(filteredCandidates, () => {
-    if (currentPage.value > totalPages.value) currentPage.value = 1
-}, { immediate: true })
-
-// ====== CONDITIONALS ======
-function prevPage() {
-    if (currentPage.value > 1) currentPage.value--
-}
-
-function nextPage() {
-    if (currentPage.value < totalPages.value) currentPage.value++
-}
-
-function handlePerPageChange(event) {
-    recordsPerPage.value = parseInt(event.target.value)
-    currentPage.value = 1
-}
-
-function handleSearchEnter() {
-    searchQuery.value = searchInput.value.trim()
-    currentPage.value = 1
-}
-
-// ====== MODAL ======
 function openAddModal() {
-    editingCandidate.value = null
-    showModal.value = true
-    addModalRef.value?.resetForm()
+  editingCandidate.value = null
+  showModal.value = true
+  nextTick(() => addModalRef.value?.resetForm())
 }
 
 function openEditModal(candidate) {
-    editingCandidate.value = candidate
-    showModal.value = true
+  editingCandidate.value = candidate
+  showModal.value = true
 }
 
 function closeModal() {
-    showModal.value = false
-    editingCandidate.value = null
+  showModal.value = false
+  editingCandidate.value = null
+}
+function saveCandidate() {
+  if (addModalRef.value?.handleFormSave) {
+    addModalRef.value.handleFormSave()
+  }
 }
 
-function saveCandidate(candidateData) {
-    const idx = candidates.value.findIndex(c => c.CandidateID === candidateData.CandidateID)
-    if (idx !== -1) {
-        candidates.value[idx] = { ...candidates.value[idx], ...candidateData }
-    } else {
-        candidates.value.push(candidateData)
+function handleFormSubmit(payload) {
+  if (!payload) return console.error('payload bị undefined!')
+
+  if (editingCandidate.value) {
+    const index = candidates.value.findIndex(c => c.CandidateID === payload.CandidateID)
+    if (index !== -1) {
+      candidates.value[index] = { ...payload }
     }
-    localStorage.setItem('candidateData', JSON.stringify(candidates.value))
-    closeModal()
+  } else {
+    payload.CandidateID = Date.now()
+    candidates.value.push(payload)
+  }
+
+  localStorage.setItem('candidateData', JSON.stringify(candidates.value))
+  closeModal()
 }
-
-// ✅ HELPERS CHO SLOTS
-function getNestedValue(row, key) {
-    return key.split('.').reduce((obj, k) => obj?.[k], row)
-}
-
-const isRecentDate = (dateStr) => {
-    if (!dateStr) return false
-    return (new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24) <= 7
-}
-
-const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleDateString('vi-VN') : '--'
-
-const truncateText = (text, max) => text?.length > max ? text.slice(0, max) + '...' : text
 
 function confirmDelete(id) {
-    if (confirm(`Bạn có chắc muốn xóa ứng viên: ${id}?`)) {
-        candidates.value = candidates.value.filter(c => c.CandidateID !== id)
-        localStorage.setItem('candidateData', JSON.stringify(candidates.value))
-    }
+  if (confirm('Bạn có chắc muốn xóa ứng viên này?')) {
+    candidates.value = candidates.value.filter(c => c.CandidateID !== id)
+    localStorage.setItem('candidateData', JSON.stringify(candidates.value))
+  }
 }
-
-const viewDetails = (row) => console.log('View details:', row)
-
-// ✅ EXPOSE CHO SLOTS - KHÔNG LỖI!
-defineExpose({
-    isRecentDate,
-    formatDate,
-    truncateText,
-    confirmDelete,
-    viewDetails,
-    openEditModal,
-    openAddModal
-})
 </script>
+
 <template>
     <section class="candidate-section">
         <div class="section-header">
-            <h2>Ứng viên</h2>
-            <div class="section-actions">
-                <button class="add-candidate-btn" @click="openAddModal"><i class="fas fa-plus"></i> Thêm ứng viên <i
-                        class="fas fa-chevron-down"></i></button>
-            </div>
+            <h2>Danh sách ứng viên</h2>
+            <MsButton leftIcon="fas fa-plus" rightIcon="fas fa-chevron-down" @click="openAddModal">Thêm ứng viên</MsButton>
         </div>
-        <div class="section-main">
-            <div class="filter-bar">
-                <div class="search-input">
-                    <i class="fas fa-search"></i>
-                    <input type="text" v-model="searchInput" placeholder="Tìm kiếm nhanh trong danh sách"
-                        @keydown.enter="handleSearchEnter" />
-                </div>
-                <div class="filter-icons">
-                    <i class="fas fa-filter"></i>
-                    <i class="fas fa-bars"></i>
-                    <i class="fas fa-cog"></i>
-                </div>
-            </div>
 
-            <MsTable :data="paginatedCandidates" :columns="candidateColumns" :show-checkbox="true" :show-actions="true"
-                :row-key="'CandidateID'" @edit="openEditModal" @delete="confirmDelete">
-                <template #cell-Score="{ value }">
-                    <div class="rating-container">
-                        <span v-for="n in (value || 0)" :key="'active-' + n" class="star-active"></span>
-                        <span v-for="n in (5 - (value || 0))" :key="'inactive-' + n" class="star-inactive"></span>
-                    </div>
-                </template>
-                <template #checkbox="{ row }">
-                    <input type="checkbox" v-model="selected" :value="row.id" />
-                </template>
-                <template #actions="{ row }">
-                    <!-- <i class="fas fa-edit" @click="openEditModal(row)"></i> -->
-                    <!-- <i class="fas fa-trash-alt" @click="confirmDelete(row.CandidateID)"></i>
-                    <i class="fas fa-eye" @click="viewDetails(row)"></i> -->
-                </template>
-            </MsTable>
-
-            <div class="pagination-footer">
-                <span class="total-records">Tổng: {{ filteredCandidates.length }} bản ghi</span>
-                <div class="pagination-controls">
-                    <span>Số bản ghi/trang</span>
-                    <select @change="handlePerPageChange" :value="recordsPerPage">
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select>
-                    <span>{{ currentRangeText }}</span>
-                    <button @click="prevPage" :disabled="currentPage === 1">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <button @click="nextPage" :disabled="currentPage === totalPages || totalPages === 0">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
+        <MsTable :data="filteredCandidates" :columns="columns" :show-actions="true" :show-checkbox="true"
+            row-key="CandidateID" v-model:search-query="searchQuery" v-model:current-page="currentPage"
+            v-model:records-per-page="recordsPerPage" :total-records="filteredCandidates.length" @edit="openEditModal"
+            @delete="confirmDelete">
+            <template #cell-Score="{ value }">
+                <div class="rating-container">
+                    <span v-for="n in Math.min(5, +value || 0)" :key="'a-' + n" class="star-active"></span>
+                    <span v-for="n in Math.max(0, 5 - Math.min(5, +value || 0))" :key="'b-' + n"
+                        class="star-inactive"></span>
                 </div>
-            </div>
-        </div>
+            </template>
+        </MsTable>
+
+        <MsPopup v-model:visible="showModal" :title="editingCandidate ? 'Sửa ứng viên' : 'Thêm ứng viên'"
+            @save="saveCandidate" @close="closeModal">
+
+            <template #content>
+                <CandidateForm ref="addModalRef" :editing-candidate="editingCandidate" @save="handleFormSubmit" />
+            </template>
+        </MsPopup>
+
     </section>
-    <CandidateForm ref="addModalRef" :show-modal="showModal" :editing-candidate="editingCandidate" @close="closeModal"
-        @save="saveCandidate" />
 </template>
 <style scoped>
 @import '../../assets/icon/icon.css';
@@ -293,117 +182,9 @@ defineExpose({
     overflow-y: hidden;
 }
 
-.filter-bar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    border-bottom: 1px solid var(--border-color);
-    padding: 10px;
-    background-color: var(--top-header-bg);
-    border-top: 1px solid var(--border-color);
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    margin-top: auto;
-}
-
-.filter-bar .search-input {
-    display: flex;
-    align-items: center;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    padding: 5px 10px;
-    width: 300px;
-}
-
-.filter-bar .search-input i {
-    color: var(--light-text-color);
-    margin-right: 10px;
-}
-
-.filter-bar .search-input input {
-    border: none;
-    background: transparent;
-    outline: none;
-    flex-grow: 1;
-    font-size: 10px;
-    color: var(--text-color);
-}
-
-.filter-bar .filter-icons i {
-    margin-left: 15px;
-    color: var(--light-text-color);
-    cursor: pointer;
-    font-size: 16px;
-}
-
-
-.pagination-footer {
-    position: sticky;
-    bottom: 0;
-    background-color: #f2f2f2;
-    padding: 10px 20px;
-    border-top: 1px solid var(--border-color);
-    z-index: 10;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 20px;
-    font-size: 13px;
-    color: var(--light-text-color);
-    padding: 15px 0;
-    background-color: var(--top-header-bg);
-    border-top: 1px solid var(--border-color);
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    margin-top: auto;
-}
-
-.pagination-controls {
-    display: flex;
-    align-items: center;
-}
-
-.pagination-controls span {
-    margin: 0 5px;
-}
-
-.pagination-controls select {
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 5px 8px;
-    font-size: 13px;
-    margin: 0 5px;
-    cursor: pointer;
-    outline: none;
-}
-
-.pagination-controls button {
-    background-color: var(--top-header-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 5px 10px;
-    margin-left: 5px;
-    cursor: pointer;
-    color: var(--light-text-color);
-    transition: background-color 0.2s ease;
-}
-
-.pagination-controls button:hover {
-    background-color: var(--secondary-color);
-}
-
-.pagination-controls button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.total-records,
-.pagination-controls {
-    padding: 10px;
-}
-
-input.input-error:focus {
-    border-color: red !important;
-    outline: none;
+.custom-add-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 3px;
 }
 </style>
